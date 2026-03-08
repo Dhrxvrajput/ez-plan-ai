@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const HeroSection = () => {
+  const [date, setDate] = useState<Date>();
+
   return (
     <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background */}
