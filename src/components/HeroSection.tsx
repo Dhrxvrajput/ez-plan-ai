@@ -58,12 +58,28 @@ const HeroSection = () => {
                 Date
               </label>
               <div className="flex items-center gap-2 border-b border-border pb-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                <input
-                  type="text"
-                  placeholder="Pick dates"
-                  className="bg-transparent text-foreground placeholder:text-muted-foreground text-sm w-full outline-none"
-                />
+                <CalendarIcon className="h-4 w-4 text-primary" />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      className={cn(
+                        "bg-transparent text-sm w-full outline-none text-left",
+                        date ? "text-foreground" : "text-muted-foreground"
+                      )}
+                    >
+                      {date ? format(date, "PPP") : "Pick dates"}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <div className="text-left">
