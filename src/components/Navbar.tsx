@@ -46,7 +46,7 @@ const Navbar = () => {
               {l.label}
             </a>
           ))}
-          <Button size="sm" className="rounded-full px-6">
+          <Button size="sm" className="rounded-full px-6" onClick={() => navigate("/plan")}>
             Start Planning
           </Button>
         </div>
