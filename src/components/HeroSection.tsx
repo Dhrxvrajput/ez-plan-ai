@@ -1,17 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
-import { MapPin, Calendar as CalendarIcon, Users } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const HeroSection = () => {
   const navigate = useNavigate();
   const [destination, setDestination] = useState("");
-  const [date, setDate] = useState<Date>();
 
   return (
     <section id="home" className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -39,11 +34,11 @@ const HeroSection = () => {
 
         {/* Search Panel */}
         <div
-          className="glass max-w-4xl mx-auto rounded-2xl p-6 md:p-8 opacity-0 animate-fade-up"
+          className="glass max-w-xl mx-auto rounded-2xl p-6 md:p-8 opacity-0 animate-fade-up"
           style={{ animationDelay: "0.4s" }}
         >
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div className="text-left">
+          <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-end">
+            <div className="text-left flex-1">
               <label className="text-xs font-medium text-foreground/60 uppercase tracking-wider mb-2 block">
                 Location
               </label>
@@ -58,51 +53,8 @@ const HeroSection = () => {
                 />
               </div>
             </div>
-            <div className="text-left">
-              <label className="text-xs font-medium text-foreground/60 uppercase tracking-wider mb-2 block">
-                Date
-              </label>
-              <div className="flex items-center gap-2 border-b border-border pb-2">
-                <CalendarIcon className="h-4 w-4 text-primary" />
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      className={cn(
-                        "bg-transparent text-sm w-full outline-none text-left",
-                        date ? "text-foreground" : "text-muted-foreground"
-                      )}
-                    >
-                      {date ? format(date, "PPP") : "Pick dates"}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={date}
-                      onSelect={setDate}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <div className="text-left">
-              <label className="text-xs font-medium text-foreground/60 uppercase tracking-wider mb-2 block">
-                Travelers
-              </label>
-              <div className="flex items-center gap-2 border-b border-border pb-2">
-                <Users className="h-4 w-4 text-primary" />
-                <input
-                  type="number"
-                  placeholder="2 guests"
-                  min={1}
-                  className="bg-transparent text-foreground placeholder:text-muted-foreground text-sm w-full outline-none"
-                />
-              </div>
-            </div>
             <Button
-              className="rounded-full h-12 text-base font-semibold"
+              className="rounded-full h-12 text-base font-semibold px-8"
               onClick={() => navigate(`/plan${destination ? `?destination=${encodeURIComponent(destination)}` : ""}`)}
             >
               Plan My Trip
