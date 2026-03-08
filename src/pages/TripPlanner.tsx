@@ -1,65 +1,88 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Compass, ArrowLeft, Hotel, Route, MapPin, DollarSign, Send, Loader2, Sparkles } from "lucide-react";
+import { Compass, ArrowLeft, Hotel, MapPin, DollarSign, Sparkles, Loader2, CalendarDays, Users, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { streamTripPlanner, type PlannerType } from "@/lib/streamChat";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { streamTripPlanner } from "@/lib/streamChat";
 import { toast } from "sonner";
+import { format, differenceInDays } from "date-fns";
+import { cn } from "@/lib/utils";
 
-const tabs = [
-  { id: "hotels" as PlannerType, label: "Hotels", icon: Hotel, placeholder: "e.g. Find luxury hotels in Bali for 2 guests, $150-300/night budget, close to beach" },
-  { id: "itinerary" as PlannerType, label: "Itinerary", icon: Route, placeholder: "e.g. 5-day Kyoto itinerary focused on temples, street food, and cherry blossoms" },
-  { id: "destinations" as PlannerType, label: "Destinations", icon: MapPin, placeholder: "e.g. I love beaches, culture, and seafood. Budget $2000 for 7 days. Traveling in June." },
-  { id: "budget" as PlannerType, label: "Budget", icon: DollarSign, placeholder: "e.g. Estimate budget for 4 days in Santorini, 2 travelers, mid-range style" },
+// Sample hotels data (replace images later with API data)
+const sampleHotels = [
+  { id: 1, name: "Mountain View Resort", rating: 4.8, price: 4500, image: "/placeholder.svg", amenities: ["Spa", "Pool", "Restaurant"] },
+  { id: 2, name: "Valley Heritage Hotel", rating: 4.5, price: 3200, image: "/placeholder.svg", amenities: ["WiFi", "Breakfast", "Parking"] },
+  { id: 3, name: "Pine Forest Lodge", rating: 4.6, price: 5800, image: "/placeholder.svg", amenities: ["Fireplace", "Mountain View", "Bar"] },
+  { id: 4, name: "Riverside Inn", rating: 4.3, price: 2800, image: "/placeholder.svg", amenities: ["Garden", "Restaurant", "Tours"] },
+];
+
+// Sample destinations
+const sampleDestinations = [
+  { id: 1, name: "Solang Valley", type: "Adventure", image: "/placeholder.svg" },
+  { id: 2, name: "Hadimba Temple", type: "Culture", image: "/placeholder.svg" },
+  { id: 3, name: "Rohtang Pass", type: "Scenic", image: "/placeholder.svg" },
+  { id: 4, name: "Old Manali", type: "Explore", image: "/placeholder.svg" },
 ];
 
 const TripPlanner = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const initialDest = searchParams.get("destination") || "";
+  const destination = searchParams.get("destination")?.trim() || "Manali";
 
-  const [activeTab, setActiveTab] = useState<PlannerType>("itinerary");
-  const [inputs, setInputs] = useState<Record<PlannerType, string>>({
-    hotels: initialDest ? `Find hotels in ${initialDest}` : "",
-    itinerary: initialDest ? `Plan a trip to ${initialDest}` : "",
-    destinations: "",
-    budget: initialDest ? `Estimate budget for a trip to ${initialDest}` : "",
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
   });
-  const [results, setResults] = useState<Record<PlannerType, string>>({
-    hotels: "", itinerary: "", destinations: "", budget: "",
-  });
-  const [loading, setLoading] = useState<Record<PlannerType, boolean>>({
-    hotels: false, itinerary: false, destinations: false, budget: false,
-  });
+  const [travelers, setTravelers] = useState("2");
+  const [selectedHotel, setSelectedHotel] = useState<number | null>(null);
+  const [optimizing, setOptimizing] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState("");
 
-  const handleGenerate = async (type: PlannerType) => {
-    const message = inputs[type];
-    if (!message.trim()) {
-      toast.error("Please describe what you're looking for");
+  const nights = dateRange.from && dateRange.to ? differenceInDays(dateRange.to, dateRange.from) : 0;
+  const hotel = selectedHotel !== null ? sampleHotels.find(h => h.id === selectedHotel) : null;
+
+  // Calculate budget
+  const hotelCost = hotel ? hotel.price * nights : 0;
+  const foodCost = nights * parseInt(travelers) * 800; // ₹800 per person per day
+  const activityCost = nights * parseInt(travelers) * 500; // ₹500 per person per day
+  const transportCost = parseInt(travelers) * 1500; // ₹1500 per person round trip local
+  const totalBudget = hotelCost + foodCost + activityCost + transportCost;
+
+  const handleOptimizeBudget = async () => {
+    if (!dateRange.from || !dateRange.to || !hotel) {
+      toast.error("Please select dates and a hotel first");
       return;
     }
 
-    setLoading((p) => ({ ...p, [type]: true }));
-    setResults((p) => ({ ...p, [type]: "" }));
+    setOptimizing(true);
+    setAiSuggestion("");
+
+    const message = `I'm planning a trip to ${destination} for ${travelers} travelers, ${nights} nights. 
+    Selected hotel: ${hotel.name} at ₹${hotel.price}/night. 
+    Current budget estimate: ₹${totalBudget.toLocaleString()} (Hotel: ₹${hotelCost.toLocaleString()}, Food: ₹${foodCost.toLocaleString()}, Activities: ₹${activityCost.toLocaleString()}, Transport: ₹${transportCost.toLocaleString()}).
+    
+    Please suggest ways to optimize this budget - cheaper alternatives, money-saving tips, and what I can do with this budget.`;
 
     let accumulated = "";
     try {
       await streamTripPlanner({
-        type,
+        type: "budget",
         message,
         onDelta: (chunk) => {
           accumulated += chunk;
-          setResults((p) => ({ ...p, [type]: accumulated }));
+          setAiSuggestion(accumulated);
         },
-        onDone: () => setLoading((p) => ({ ...p, [type]: false })),
+        onDone: () => setOptimizing(false),
         onError: (err) => {
           toast.error(err);
-          setLoading((p) => ({ ...p, [type]: false }));
+          setOptimizing(false);
         },
       });
     } catch {
       toast.error("Failed to connect. Please try again.");
-      setLoading((p) => ({ ...p, [type]: false }));
+      setOptimizing(false);
     }
   };
 
@@ -80,106 +103,232 @@ const TripPlanner = () => {
             <div className="flex items-center gap-2">
               <Compass className="h-6 w-6 text-primary" />
               <span className="font-display text-xl font-bold text-foreground">
-                Trip Planner
+                Trip to {destination}
               </span>
             </div>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            AI-Powered
           </div>
         </div>
       </header>
 
-      {/* Main */}
-      <main className="container mx-auto px-6 py-8 max-w-4xl">
-        <div className="text-center mb-10">
-          <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground mb-3">
-            Plan Your Perfect Trip
-          </h1>
-          <p className="text-muted-foreground max-w-xl mx-auto">
-            Get AI-powered hotel recommendations, optimized itineraries, destination
-            suggestions, and budget estimates — all in one place.
-          </p>
+      <main className="container mx-auto px-6 py-8 max-w-6xl">
+        {/* Date & Travelers Selection */}
+        <div className="bg-card rounded-2xl border border-border p-6 mb-8">
+          <h2 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 text-primary" />
+            Select Your Travel Dates
+          </h2>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
+                Check-in / Check-out
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal h-12",
+                      !dateRange.from && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    {dateRange.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d, yyyy")}
+                        </>
+                      ) : (
+                        format(dateRange.from, "MMM d, yyyy")
+                      )
+                    ) : (
+                      "Pick your dates"
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={(range) => setDateRange({ from: range?.from, to: range?.to })}
+                    numberOfMonths={2}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="w-40">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
+                Travelers
+              </label>
+              <Select value={travelers} onValueChange={setTravelers}>
+                <SelectTrigger className="h-12">
+                  <Users className="mr-2 h-4 w-4" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <SelectItem key={n} value={n.toString()}>
+                      {n} {n === 1 ? "traveler" : "travelers"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {nights > 0 && (
+              <div className="text-sm text-muted-foreground bg-muted px-4 py-3 rounded-xl">
+                <span className="font-semibold text-foreground">{nights}</span> nights
+              </div>
+            )}
+          </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as PlannerType)}>
-          <TabsList className="grid w-full grid-cols-4 mb-8 h-auto p-1">
-            {tabs.map((t) => (
-              <TabsTrigger
-                key={t.id}
-                value={t.id}
-                className="flex items-center gap-2 py-3 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+        {/* Destinations */}
+        <div className="mb-8">
+          <h2 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-primary" />
+            Top Destinations in {destination}
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {sampleDestinations.map((dest) => (
+              <div
+                key={dest.id}
+                className="group relative rounded-xl overflow-hidden aspect-[4/3] bg-muted cursor-pointer"
               >
-                <t.icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{t.label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {tabs.map((t) => (
-            <TabsContent key={t.id} value={t.id}>
-              {/* Input area */}
-              <div className="bg-card rounded-2xl border border-border p-6 mb-6">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 block">
-                  Describe what you need
-                </label>
-                <textarea
-                  value={inputs[t.id]}
-                  onChange={(e) =>
-                    setInputs((p) => ({ ...p, [t.id]: e.target.value }))
-                  }
-                  placeholder={t.placeholder}
-                  rows={3}
-                  className="w-full bg-muted/50 border border-border rounded-xl px-4 py-3 text-foreground placeholder:text-muted-foreground text-sm outline-none focus:ring-2 focus:ring-primary/30 transition-all resize-none mb-4"
+                <img
+                  src={dest.image}
+                  alt={dest.name}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                <div className="absolute bottom-3 left-3 right-3">
+                  <p className="text-white font-semibold text-sm">{dest.name}</p>
+                  <p className="text-white/70 text-xs">{dest.type}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Hotels */}
+        <div className="mb-8">
+          <h2 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
+            <Hotel className="h-5 w-5 text-primary" />
+            Select Your Hotel
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {sampleHotels.map((h) => (
+              <div
+                key={h.id}
+                onClick={() => setSelectedHotel(h.id)}
+                className={cn(
+                  "rounded-xl border-2 overflow-hidden cursor-pointer transition-all",
+                  selectedHotel === h.id
+                    ? "border-primary ring-2 ring-primary/20"
+                    : "border-border hover:border-primary/50"
+                )}
+              >
+                <div className="aspect-video bg-muted relative">
+                  <img src={h.image} alt={h.name} className="w-full h-full object-cover" />
+                  {selectedHotel === h.id && (
+                    <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+                      Selected
+                    </div>
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3 className="font-semibold text-foreground mb-1">{h.name}</h3>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                    {h.rating}
+                  </div>
+                  <p className="text-primary font-bold">₹{h.price.toLocaleString()}<span className="text-xs font-normal text-muted-foreground">/night</span></p>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {h.amenities.slice(0, 2).map((a) => (
+                      <span key={a} className="text-xs bg-muted px-2 py-0.5 rounded">{a}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Budget Estimate */}
+        <div className="bg-card rounded-2xl border border-border p-6 mb-8">
+          <h2 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-primary" />
+            Budget Estimate
+          </h2>
+
+          {nights > 0 && hotel ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-muted/50 rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground uppercase mb-1">Hotel ({nights} nights)</p>
+                  <p className="text-xl font-bold text-foreground">₹{hotelCost.toLocaleString()}</p>
+                </div>
+                <div className="bg-muted/50 rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground uppercase mb-1">Food & Dining</p>
+                  <p className="text-xl font-bold text-foreground">₹{foodCost.toLocaleString()}</p>
+                </div>
+                <div className="bg-muted/50 rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground uppercase mb-1">Activities</p>
+                  <p className="text-xl font-bold text-foreground">₹{activityCost.toLocaleString()}</p>
+                </div>
+                <div className="bg-muted/50 rounded-xl p-4">
+                  <p className="text-xs text-muted-foreground uppercase mb-1">Transport</p>
+                  <p className="text-xl font-bold text-foreground">₹{transportCost.toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between bg-primary/10 rounded-xl p-4">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase mb-1">Total Estimated Budget</p>
+                  <p className="text-3xl font-bold text-primary">₹{totalBudget.toLocaleString()}</p>
+                </div>
                 <Button
-                  onClick={() => handleGenerate(t.id)}
-                  disabled={loading[t.id]}
-                  className="rounded-full px-8 gap-2"
+                  onClick={handleOptimizeBudget}
+                  disabled={optimizing}
+                  className="rounded-full gap-2"
                 >
-                  {loading[t.id] ? (
+                  {optimizing ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Generating...
+                      Optimizing...
                     </>
                   ) : (
                     <>
-                      <Send className="h-4 w-4" />
-                      Generate {t.label}
+                      <Sparkles className="h-4 w-4" />
+                      Optimize with AI
                     </>
                   )}
                 </Button>
               </div>
 
-              {/* Results */}
-              {results[t.id] && (
-                <div className="bg-card rounded-2xl border border-border p-6 animate-fade-up">
-                  <div className="flex items-center gap-2 mb-4">
+              {/* AI Suggestions */}
+              {aiSuggestion && (
+                <div className="bg-muted/50 rounded-xl p-4 mt-4">
+                  <h3 className="font-semibold text-foreground mb-2 flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary" />
-                    <h3 className="font-display text-lg font-semibold text-foreground">
-                      AI Recommendation
-                    </h3>
-                  </div>
-                  <div className="prose prose-sm max-w-none text-foreground/90 [&_h1]:font-display [&_h2]:font-display [&_h3]:font-display [&_h1]:text-foreground [&_h2]:text-foreground [&_h3]:text-foreground [&_strong]:text-foreground [&_li]:text-foreground/80 [&_p]:text-foreground/80">
-                    <MarkdownRenderer content={results[t.id]} />
+                    AI Budget Tips
+                  </h3>
+                  <div className="prose prose-sm max-w-none text-foreground/80 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-sm [&_h3]:font-semibold [&_li]:text-sm [&_p]:text-sm">
+                    <MarkdownRenderer content={aiSuggestion} />
                   </div>
                 </div>
               )}
-
-              {/* Empty state */}
-              {!results[t.id] && !loading[t.id] && (
-                <div className="text-center py-16 text-muted-foreground">
-                  <t.icon className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p className="text-sm">
-                    Describe your trip details above and hit generate to get
-                    AI-powered {t.label.toLowerCase()} recommendations.
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-          ))}
-        </Tabs>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-30" />
+              <p className="text-sm">Select dates and a hotel to see your budget estimate</p>
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );
