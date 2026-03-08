@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+  const [destination, setDestination] = useState("");
   const [date, setDate] = useState<Date>();
 
   return (
