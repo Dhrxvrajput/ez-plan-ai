@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { MapPin, Calendar as CalendarIcon, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
