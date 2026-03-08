@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Menu, X, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -12,6 +13,7 @@ const navLinks = [
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
@@ -44,7 +46,7 @@ const Navbar = () => {
               {l.label}
             </a>
           ))}
-          <Button size="sm" className="rounded-full px-6">
+          <Button size="sm" className="rounded-full px-6" onClick={() => navigate("/plan")}>
             Start Planning
           </Button>
         </div>
@@ -71,7 +73,7 @@ const Navbar = () => {
               {l.label}
             </a>
           ))}
-          <Button size="sm" className="rounded-full px-6 mt-4 w-full">
+          <Button size="sm" className="rounded-full px-6 mt-4 w-full" onClick={() => { setMobileOpen(false); navigate("/plan"); }}>
             Start Planning
           </Button>
         </div>

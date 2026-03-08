@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { MapPin, Calendar as CalendarIcon, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,8 @@ import { cn } from "@/lib/utils";
 import heroBg from "@/assets/hero-bg.jpg";
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+  const [destination, setDestination] = useState("");
   const [date, setDate] = useState<Date>();
 
   return (
@@ -49,6 +52,8 @@ const HeroSection = () => {
                 <input
                   type="text"
                   placeholder="Where to?"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
                   className="bg-transparent text-foreground placeholder:text-muted-foreground text-sm w-full outline-none"
                 />
               </div>
@@ -96,7 +101,10 @@ const HeroSection = () => {
                 />
               </div>
             </div>
-            <Button className="rounded-full h-12 text-base font-semibold">
+            <Button
+              className="rounded-full h-12 text-base font-semibold"
+              onClick={() => navigate(`/plan${destination ? `?destination=${encodeURIComponent(destination)}` : ""}`)}
+            >
               Plan My Trip
             </Button>
           </div>
