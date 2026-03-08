@@ -73,7 +73,7 @@ const Navbar = () => {
               {l.label}
             </a>
           ))}
-          <Button size="sm" className="rounded-full px-6 mt-4 w-full">
+          <Button size="sm" className="rounded-full px-6 mt-4 w-full" onClick={() => { setMobileOpen(false); navigate("/plan"); }}>
             Start Planning
           </Button>
         </div>

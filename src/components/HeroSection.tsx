@@ -101,7 +101,10 @@ const HeroSection = () => {
                 />
               </div>
             </div>
-            <Button className="rounded-full h-12 text-base font-semibold">
+            <Button
+              className="rounded-full h-12 text-base font-semibold"
+              onClick={() => navigate(`/plan${destination ? `?destination=${encodeURIComponent(destination)}` : ""}`)}
+            >
               Plan My Trip
             </Button>
           </div>
