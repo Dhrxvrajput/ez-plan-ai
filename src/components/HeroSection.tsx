@@ -25,7 +25,7 @@ const HeroSection = () => {
         <h1
           className="font-display text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight text-primary-foreground mb-6 opacity-0 animate-fade-up"
         >
-          EZTRAVELS
+          EzTravels
         </h1>
         <p
           className="text-lg md:text-xl text-primary-foreground/80 max-w-2xl mx-auto mb-12 opacity-0 animate-fade-up"
