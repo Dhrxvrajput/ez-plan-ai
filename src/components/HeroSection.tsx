@@ -52,6 +52,8 @@ const HeroSection = () => {
                 <input
                   type="text"
                   placeholder="Where to?"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
                   className="bg-transparent text-foreground placeholder:text-muted-foreground text-sm w-full outline-none"
                 />
               </div>
